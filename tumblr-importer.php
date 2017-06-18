@@ -1,10 +1,10 @@
 <?php
 /*
 Plugin Name: Tumblr Importer
-Plugin URI: http://wordpress.org/extend/plugins/tumblr-importer/
+Plugin URI: http://eph.me/tumblr-importer/
 Description: Import posts from a Tumblr blog.
-Author: wordpressdotorg
-Author URI: http://wordpress.org/
+Author: Evan Hildreth
+Author URI: http://eph.me/
 Version: 0.8
 License: GPL v2 - http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 Text Domain: tumblr-importer

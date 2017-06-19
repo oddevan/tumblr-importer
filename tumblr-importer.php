@@ -801,14 +801,16 @@ class Tumblr_Import extends WP_Importer_Cron {
 					$post['media']['height'] = (string) $tpost->photos[0]->original_size->height;
 					$post['post_content'] = (string) $tpost->caption;
 					if ( ! empty( $tpost->photos ) ) {
-						$post['format'] = 'gallery';
-						foreach ( $tpost->photos as $photo ) {
-							$post['gallery'][] = array (
-								'src'     => $photo->original_size->url,
-								'width'   => $photo->original_size->width,
-								'height'  => $photo->original_size->height,
-								'caption' => $photo->caption,
-							);
+						if ( count($tpost->photos) > 1 ) {
+							$post['format'] = 'gallery';
+							foreach ( $tpost->photos as $photo ) {
+								$post['gallery'][] = array (
+									'src'     => $photo->original_size->url,
+									'width'   => $photo->original_size->width,
+									'height'  => $photo->original_size->height,
+									'caption' => $photo->caption,
+								);
+							}
 						}
 					}
 					break;
@@ -959,7 +961,7 @@ class Tumblr_Import extends WP_Importer_Cron {
 	 * Here we override the default behavior.
 	 */
 	function filter_allow_empty_content( $maybe_empty, $_post ) {
-		if ( 'gallery' == $_post['format'] )
+		if ( 'gallery' == $_post['format'] || 'image' == $_post['format'] )
 			return false;
 		
 		return $maybe_empty;

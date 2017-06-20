@@ -835,19 +835,25 @@ class Tumblr_Import extends WP_Importer_Cron {
 					break;
 				case 'audio':
 					$post['format'] = 'audio';
-					$post['media']['filename'] = basename( (string) $tpost->audio_url );
-					// If no .mp3 extension, add one so that sideloading works.
-					if ( ! preg_match( '/\.mp3$/', $post['media']['filename'] ) )
-						$post['media']['filename'] .= '.mp3';
-					$post['media']['audio'] = (string) $tpost->audio_url .'?plead=please-dont-download-this-or-our-lawyers-wont-let-us-host-audio';
-					$post['post_content'] = (string) $tpost->player . "\n" . (string) $tpost->caption;
+					if ( $tpost->audio_type == 'tumblr') {
+						$post['media']['filename'] = basename( (string) $tpost->audio_url );
+						// If no .mp3 extension, add one so that sideloading works.
+						if ( ! preg_match( '/\.mp3$/', $post['media']['filename'] ) )
+							$post['media']['filename'] .= '.mp3';
+						$post['media']['audio'] = (string) $tpost->audio_url .'?plead=please-dont-download-this-or-our-lawyers-wont-let-us-host-audio';
+						$post['post_content'] = '';
+					} else {
+						$post['post_content'] = $oembed->get( (string) $tpost->permalink_url )->html . "\n";
+					}
+					$post['post_content'] = (string) $tpost->caption;
 					break;
 				case 'video':
 					$post['format'] = 'video';
 					$post['post_content'] = '';
 
+					/*
 					$video = array_shift( $tpost->player );
-				
+		
 					if ( false !== strpos( (string) $video->embed_code, 'embed' ) ) {
 						if ( preg_match_all('/<embed (.+?)>/', (string) $video->embed_code, $matches) ) {
 							foreach ($matches[1] as $match) {
@@ -874,8 +880,18 @@ class Tumblr_Import extends WP_Importer_Cron {
 						// @todo: See if the video source is going to be oEmbed'able before adding the flash player
 						$post['post_content'] .= $video->embed_code;
 					}
-	
-					$post['post_content'] .= "\n" . (string) $tpost->caption;
+					*/
+			
+					if ($tpost->video_type == 'tumblr') {
+						$post['media'] = array(
+							'filename' => basename( (string) $tpost->video_url ),
+							'video' => (string) $tpost->video_url
+						);
+						$post['post_content'] = '';
+					} else {
+						$post['post_content'] = $oembed->get( (string) $tpost->permalink_url )->html . "\n";
+					}
+					$post['post_content'] .= (string) $tpost->caption;
 					break;
 				case 'answer':
 					// TODO: Include asking_name and asking_url values?
@@ -886,12 +902,13 @@ class Tumblr_Import extends WP_Importer_Cron {
 				case 'text':
 				default:
 					$post['post_title'] = (string) $tpost->title;
+					if ( ! isset($tpost->title) )
+						$post['format'] = 'aside';
 					$post['post_content'] = (string) $tpost->body;
 					break;
 			}
 			$posts[] = $post;
 		}
-
 		return $posts;
 	}
 

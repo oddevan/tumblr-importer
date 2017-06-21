@@ -775,6 +775,10 @@ class Tumblr_Import extends WP_Importer_Cron {
 				return new WP_Error('tumblr_error', $_error );
 		}
 
+		require_once plugin_dir_path( __FILE__ ).'OEmbed/ClassLoader.php';
+		OEmbed\ClassLoader::register();
+		$oembed = new OEmbed\OEmbedService( array(), true );
+
 		$posts = array();
 		$tposts = $response->response->posts;
 		foreach( $tposts as $tpost ) {

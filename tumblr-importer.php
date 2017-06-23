@@ -775,9 +775,7 @@ class Tumblr_Import extends WP_Importer_Cron {
 				return new WP_Error('tumblr_error', $_error );
 		}
 
-		require_once plugin_dir_path( __FILE__ ).'simple-oembed/lib/OEmbed/ClassLoader.php';
-		OEmbed\ClassLoader::register();
-		$oembed = new OEmbed\OEmbedService( array(), true );
+		$myTumblrURL = $response->response->blog->name;
 
 		$posts = array();
 		$tposts = $response->response->posts;
@@ -795,7 +793,19 @@ class Tumblr_Import extends WP_Importer_Cron {
 				foreach ( $tpost->tags as $tag )
 					$post['tags_input'][] = rtrim( (string) $tag, ','); // Strip trailing Commas off it too.
 			}
-
+	
+			//If this is a reblog, embed the reblogged post and add comments
+			if ( isset( $tpost->trail ) &&
+				 ! empty( $tpost->trail ) &&
+				 $tpost->trail[0]->blog->name != $myTumblrURL ) {
+		
+				$origURL = 'https://'.$tpost->trail[0]->blog->name.'.tumblr.com/post/'.$tpost->trail[0]->post->id.'';
+		
+				$post['post_content'] = wp_oembed_get( $origURL );
+		
+				$post['post_content'] .= "\n\n".$tpost->reblog->comment;
+			} else {
+	
 			switch ( (string) $tpost->type ) {
 				case 'photo':
 					$post['format'] = 'image';
@@ -847,53 +857,21 @@ class Tumblr_Import extends WP_Importer_Cron {
 						$post['media']['audio'] = (string) $tpost->audio_url .'?plead=please-dont-download-this-or-our-lawyers-wont-let-us-host-audio';
 						$post['post_content'] = '';
 					} else {
-						$post['post_content'] = $oembed->get( (string) $tpost->permalink_url )->html . "\n";
+						$post['post_content'] = wp_oembed_get( (string) $tpost->permalink_url ) . "\n";
 					}
 					$post['post_content'] = (string) $tpost->caption;
 					break;
 				case 'video':
 					$post['format'] = 'video';
 					$post['post_content'] = '';
-
-					/*
-					$video = array_shift( $tpost->player );
-		
-					if ( false !== strpos( (string) $video->embed_code, 'embed' ) ) {
-						if ( preg_match_all('/<embed (.+?)>/', (string) $video->embed_code, $matches) ) {
-							foreach ($matches[1] as $match) {
-								foreach ( wp_kses_hair( $match, array( 'http' ) ) as $attr )
-									$embed[ $attr['name'] ] = $attr['value'];
-							}
-
-							// special case for weird youtube vids
-							$embed['src'] = preg_replace( '|http://www.youtube.com/v/([a-zA-Z0-9_]+).*|i', 'http://www.youtube.com/watch?v=$1', $embed['src'] );
-
-							// TODO find other special cases, since tumblr is full of them
-							$post['post_content'] = $embed['src'];
-						}
-
-						// Sometimes, video-source contains iframe markup.
-						if ( preg_match( '/<iframe/', $video->embed_code ) ) {
-							$embed['src'] = preg_replace( '|<iframe.*src="http://www.youtube.com/embed/([a-zA-Z0-9_\-]+)\??.*".*</iframe>|', 'http://www.youtube.com/watch?v=$1', $video->embed_code );
-							$post['post_content'] = $embed['src'];
-						}
-					} elseif ( preg_match( '/<iframe.*vimeo/', $video->embed_code ) ) {
-						$embed['src'] = preg_replace( '|<iframe.*src="(http://player.vimeo.com/video/([a-zA-Z0-9_\-]+))\??.*".*</iframe>.*|', 'http://vimeo.com/$2', $video->embed_code );
-						$post['post_content'] = $embed['src'];
-					} else {
-						// @todo: See if the video source is going to be oEmbed'able before adding the flash player
-						$post['post_content'] .= $video->embed_code;
-					}
-					*/
 			
 					if ($tpost->video_type == 'tumblr') {
 						$post['media'] = array(
 							'filename' => basename( (string) $tpost->video_url ),
 							'video' => (string) $tpost->video_url
 						);
-						$post['post_content'] = '';
 					} else {
-						$post['post_content'] = $oembed->get( (string) $tpost->permalink_url )->html . "\n";
+						$post['post_content'] = wp_oembed_get( (string) $tpost->permalink_url ) . "\n";
 					}
 					$post['post_content'] .= (string) $tpost->caption;
 					break;
@@ -910,6 +888,7 @@ class Tumblr_Import extends WP_Importer_Cron {
 						$post['format'] = 'aside';
 					$post['post_content'] = (string) $tpost->body;
 					break;
+			}
 			}
 			$posts[] = $post;
 		}
